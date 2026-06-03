@@ -29,6 +29,12 @@ import util
 
 from locals import *
 
+from collision_manager import CollisionManager
+
+PIRATE_FIRE_INTERVAL = 50
+LEVEL_MESSAGE_DURATION = 120
+SPECIAL_SHOT_DELAY = FPS * 3
+
 rr=random.random
 
 def rrr(left,right):
@@ -63,6 +69,7 @@ class Game:
         #Water.global_water = self.water
         self.water_sprite = pygame.sprite.Group()
         self.water_sprite.add(self.water)
+        self.collision_manager = CollisionManager(self)
 
         if not Game.sky:
             Game.sky = util.load_image("taivas")
@@ -146,7 +153,7 @@ class Game:
                     particle_point = self.player.get_point((5.0 + rr() * 9.0, 0))
                     particle_point[0] += self.player.rect.centerx
                     particle_point[1] += self.player.rect.centery
-                    if self.spacepressed and self.t > self.spacepressed + FPS * 3:
+                    if self.spacepressed and self.t > self.spacepressed + SPECIAL_SHOT_DELAY:
                         pass
                         #~ self.particles.add_fire_steam_particle(particle_point)
                     else:
@@ -155,7 +162,7 @@ class Game:
                     particle_point = self.player.get_point((19.0 + rr() * 7.0, 5.0))
                     particle_point[0] += self.player.rect.centerx
                     particle_point[1] += self.player.rect.centery
-                    if self.spacepressed and self.t > self.spacepressed + FPS * 3:
+                    if self.spacepressed and self.t > self.spacepressed + SPECIAL_SHOT_DELAY:
                         pass
                         #~ self.particles.add_fire_steam_particle(particle_point)
                     else:
@@ -187,7 +194,7 @@ class Game:
                         self.powerup_sprites.remove(powerup)
 
                 if not self.gameover:
-                    self.check_collisions()
+                    self.collision_manager.check()
 
                 if self.health.hearts_left == 0 and not self.player.dying:
                     self.player.die()
@@ -253,122 +260,195 @@ class Game:
         pygame.image.save(self.screen, filename)
         print("Screenshot saved as " + filename)
 
-    def handle_events(self):
-        nextframe = False
-        framecount = 0
-        while not nextframe:
-          # wait until there's at least one event in the queue
-          #nextframe = True
-          pygame.event.post(pygame.event.wait())
-          for event in pygame.event.get():
-            #event = pygame.event.wait()
-            if event.type == QUIT or \
-               event.type == KEYDOWN and event.key == K_ESCAPE:
-                self.done = True
-                nextframe = True
-            elif event.type == NEXTFRAME:
-                framecount += 1
-                nextframe = True
-            elif self.gameover:
-                if event.type == JOYBUTTONDOWN:
-                    self.done = True
-                    nextframe = True
-                elif event.type == KEYDOWN:
-                    self.done = True
-                    nextframe = True
-                continue
-            elif event.type == JOYAXISMOTION:
-                if event.axis == 0:
-                    if event.value < -0.5:
-                        self.player.move_left(True)
-                    elif event.value > 0.5:
-                        self.player.move_right(True)
-                    else:
-                        self.player.move_left(False)
-                        self.player.move_right(False)
-            elif event.type == JOYBUTTONDOWN:
-                if event.button == 0:
-                    if not self.pause:
-                        self.player.jump()
-                elif event.button == 1:
-                    if not self.pause:
-                        if self.lastshot > MIN_FIRE_DELAY and not self.player.dying:
-                            cb = Cannonball(self.player.rect, self.player.angle)
-                            self.cannonballs.append(cb)
-                            self.cannonball_sprites.add(cb)
-                            particle_point = self.player.get_point((42.0,10.0))
-                            particle_point[0] += self.player.rect.centerx
-                            particle_point[1] += self.player.rect.centery
-                            for i in range(4):
-                                self.particles.add_fire_steam_particle(particle_point)
-                            self.lastshot = 0
-                            self.spacepressed = self.t
-                elif event.button == 5:
-                    self.take_screenshot()
-                elif event.button == 8:
-                    self.set_pause()
-            elif event.type == KEYDOWN:
-                if event.key == K_LEFT:
-                    self.player.move_left(True)
-                elif event.key == K_RIGHT:
-                    self.player.move_right(True)
-                elif event.key == K_SPACE:
-                    if not self.pause:
-                    # Only 3 cannonballs at once
-                    # Maximum firing rate set at the top
-                        if self.lastshot > MIN_FIRE_DELAY and not self.player.dying:
-                            cb = Cannonball(self.player.rect, self.player.angle)
-                            self.cannonballs.append(cb)
-                            self.cannonball_sprites.add(cb)
-                            particle_point = self.player.get_point((42.0,10.0))
-                            particle_point[0] += self.player.rect.centerx
-                            particle_point[1] += self.player.rect.centery
-                            for i in range(4):
-                                self.particles.add_fire_steam_particle(particle_point)
-                            self.lastshot = 0
-                            self.spacepressed = self.t
-                elif event.key == K_UP:
-                    if not self.pause:
-                        self.player.jump()
-                elif event.key == K_s:
-                    self.take_screenshot()
-                elif event.key == K_p:
-                    self.set_pause()
-            elif event.type == KEYUP:
-                if event.key == K_LEFT:
-                    self.player.move_left(False)
-                elif event.key == K_RIGHT:
-                    self.player.move_right(False)
-                elif event.key == K_SPACE:
-                    if not self.pause:
-                        if self.spacepressed and self.t > self.spacepressed + FPS * 3 and not self.player.dying:
-                            cb = Cannonball(self.player.rect, self.player.angle, special=True)
-                            self.cannonballs.append(cb)
-                            self.cannonball_sprites.add(cb)
-                            particle_point = self.player.get_point((42.0,10.0))
-                            particle_point[0] += self.player.rect.centerx
-                            particle_point[1] += self.player.rect.centery
-                            for i in range(30):
-                                self.particles.add_fire_steam_particle((particle_point[0]+rrr(-4,4),particle_point[1]+rrr(-3,3)))
-                            self.lastshot = 0
-                        self.spacepressed = None
-            elif event.type == JOYBUTTONUP:
-                if event.button == 1:
-                    if not self.pause:
-                        if self.spacepressed and self.t > self.spacepressed + FPS * 3 and not self.player.dying:
-                            cb = Cannonball(self.player.rect, self.player.angle, special=True)
-                            self.cannonballs.append(cb)
-                            self.cannonball_sprites.add(cb)
-                            particle_point = self.player.get_point((42.0,10.0))
-                            particle_point[0] += self.player.rect.centerx
-                            particle_point[1] += self.player.rect.centery
-                            for i in range(30):
-                                self.particles.add_fire_steam_particle((particle_point[0]+rrr(-4,4),particle_point[1]+rrr(-3,3)))
-                            self.lastshot = 0
-                        self.spacepressed = None
+    def handle_gameover(self,event):
 
-        #if framecount > 1:
-        #    print str(self.t) + ": missed " + str(framecount - 1) + " frames!"
+        if not self.gameover:
+            return False
+
+        if event.type in [JOYBUTTONDOWN, KEYDOWN]:
+
+            self.done = True
+            return True
+
+        return False
+    
+    def fire_cannonball(self, special=False):
+
+        cb = Cannonball(
+            self.player.rect,
+            self.player.angle,
+            special=special
+        )
+
+        self.cannonballs.append(cb)
+        self.cannonball_sprites.add(cb)
+
+        particle_point = self.player.get_point((42.0,10.0))
+
+        particle_point[0] += self.player.rect.centerx
+        particle_point[1] += self.player.rect.centery
+
+        if special:
+
+            for i in range(30):
+
+                self.particles.add_fire_steam_particle(
+                    (
+                        particle_point[0] + rrr(-4,4),
+                        particle_point[1] + rrr(-3,3)
+                    )
+                )
+
+        else:
+
+            for i in range(4):
+
+                self.particles.add_fire_steam_particle(
+                    particle_point
+                )
+
+        self.lastshot = 0
+
+    def handle_quit(self,event):
+
+        if event.type == QUIT or \
+        (event.type == KEYDOWN and event.key == K_ESCAPE):
+
+            self.done = True
+            return True
+
+        return False
+
+    def handle_joystick(self,event):
+
+        if event.type == JOYAXISMOTION:
+
+            if event.axis == 0:
+
+                if event.value < -0.5:
+                    self.player.move_left(True)
+
+                elif event.value > 0.5:
+                    self.player.move_right(True)
+
+                else:
+                    self.player.move_left(False)
+                    self.player.move_right(False)
+
+        elif event.type == JOYBUTTONDOWN:
+
+            if event.button == 0:
+
+                if not self.pause:
+                    self.player.jump()
+
+            elif event.button == 1:
+
+                if not self.pause:
+
+                    if self.lastshot > MIN_FIRE_DELAY \
+                    and not self.player.dying:
+
+                        self.fire_cannonball()
+
+                        self.spacepressed = self.t
+
+            elif event.button == 5:
+                self.take_screenshot()
+
+            elif event.button == 8:
+                self.set_pause()
+
+        elif event.type == JOYBUTTONUP:
+
+            if event.button == 1:
+
+                if not self.pause:
+
+                    if self.spacepressed \
+                    and self.t > self.spacepressed + SPECIAL_SHOT_DELAY \
+                    and not self.player.dying:
+
+                        self.fire_cannonball(special=True)
+
+                    self.spacepressed = None
+
+    def handle_keyboard(self,event):
+
+        if event.type == KEYDOWN:
+
+            if event.key == K_LEFT:
+                self.player.move_left(True)
+
+            elif event.key == K_RIGHT:
+                self.player.move_right(True)
+
+            elif event.key == K_UP:
+
+                if not self.pause:
+                    self.player.jump()
+
+            elif event.key == K_SPACE:
+
+                if not self.pause:
+
+                    if self.lastshot > MIN_FIRE_DELAY \
+                    and not self.player.dying:
+
+                        self.fire_cannonball()
+
+                        self.spacepressed = self.t
+
+            elif event.key == K_s:
+                self.take_screenshot()
+
+            elif event.key == K_p:
+                self.set_pause()
+
+        elif event.type == KEYUP:
+
+            if event.key == K_LEFT:
+                self.player.move_left(False)
+
+            elif event.key == K_RIGHT:
+                self.player.move_right(False)
+
+            elif event.key == K_SPACE:
+
+                if not self.pause:
+
+                    if self.spacepressed \
+                    and self.t > self.spacepressed + SPECIAL_SHOT_DELAY \
+                    and not self.player.dying:
+
+                        self.fire_cannonball(special=True)
+
+                    self.spacepressed = None
+
+    def handle_events(self):
+
+        nextframe = False
+
+        while not nextframe:
+
+            pygame.event.post(pygame.event.wait())
+
+            for event in pygame.event.get():
+
+                if self.handle_quit(event):
+                    nextframe = True
+
+                elif event.type == NEXTFRAME:
+                    nextframe = True
+
+                elif self.handle_gameover(event):
+                    nextframe = True
+
+                elif event.type in [KEYDOWN, KEYUP]:
+                    self.handle_keyboard(event)
+
+                elif event.type in [JOYBUTTONDOWN, JOYBUTTONUP, JOYAXISMOTION]:
+                    self.handle_joystick(event)
 
     def set_pause(self):
         self.pause = not self.pause
@@ -403,7 +483,7 @@ class Game:
         if self.gameover:
             self.screen.blit(self.gameover_image, self.gameover_rect)
 
-        if self.level.t < 120:
+        if self.level.t < LEVEL_MESSAGE_DURATION:
             image = None
             i = 0
             if self.level.phase < len(self.level.phase_messages):
@@ -551,7 +631,7 @@ class Game:
 
         self.pirate_sprites.update()
         for pirate in self.pirates:
-            if pirate.t % 50 == 0 and not pirate.dying:
+            if pirate.t % PIRATE_FIRE_INTERVAL == 0 and not pirate.dying:
                 # Pirate shoots, this should probably be handled by the Pirateboat class
                 cb = Cannonball(pirate.rect, pirate.angle, left = True)
                 self.cannonballs.append(cb)

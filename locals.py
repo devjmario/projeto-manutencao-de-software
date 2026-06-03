@@ -9,6 +9,12 @@ SCREEN_HEIGHT = 300#240
 SCREEN_FULLSCREEN = 0
 FPS = 30
 
+DIFFICULTY_EASY = 0
+DIFFICULTY_NORMAL = 1
+DIFFICULTY_HARD = 2
+
+GAME_DIFFICULTY = DIFFICULTY_NORMAL
+
 
 class Variables:
     aa = True
@@ -16,4 +22,5 @@ class Variables:
     particles = True
     sound = True    
     music = True
+    dificulty = 1
     name = "Funny Boater"

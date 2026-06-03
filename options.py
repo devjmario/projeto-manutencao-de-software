@@ -13,7 +13,8 @@ class Options:
     AA = 1
     SOUND = 2
     MUSIC = 3
-    NAME = 4
+    DIFFICULTY = 4
+    NAME = 5
 
     def __init__(self, screen):
         self.screen = screen
@@ -38,13 +39,23 @@ class Options:
         self.selection = 0
         self.t = 0
 
-    def refresh(self):
-        self.menu = ("Particle effects: " + (Variables.particles and "on" or "off"),
-                     "Antialiasing: " + (Variables.aa and "on" or "off"),
-                     "Sound effects: " + (Variables.sound and "on" or "off"),
-                     "Music: " + (Variables.music and "on" or "off"),
-                     "Player Name: " + Variables.name)
+    def get_difficulty_name(self):
+        if Variables.dificulty == 0:
+            return "Easy"
+        elif Variables.dificulty == 2:
+            return "Hard"
+        return "Normal"
 
+    def refresh(self):
+        self.menu = (
+            "Particle effects: " + (Variables.particles and "on" or "off"),
+            "Antialiasing: " + (Variables.aa and "on" or "off"),
+            "Sound effects: " + (Variables.sound and "on" or "off"),
+            "Music: " + (Variables.music and "on" or "off"),
+            "Difficulty: " + self.get_difficulty_name(),
+            "Player Name: " + Variables.name
+        )
+    
     def run(self):
         done = False
 
@@ -170,11 +181,40 @@ class Options:
                     pygame.mixer.music.stop()
             except:
                 pass
+        elif self.selection == Options.DIFFICULTY:
+            if Variables.dificulty > 0:
+                Variables.dificulty -= 1
         self.refresh()
 
     def change_right(self):
-        # They're all bools right now, so...
-        self.change_left()
+
+        global GAME_DIFFICULTY
+
+        if self.selection == Options.PARTICLES:
+            Variables.particles = not Variables.particles
+
+        elif self.selection == Options.AA:
+            Variables.aa = not Variables.aa
+
+        elif self.selection == Options.SOUND:
+            Variables.sound = not Variables.sound
+
+        elif self.selection == Options.MUSIC:
+            Variables.music = not Variables.music
+
+            try:
+                if Variables.music:
+                    pygame.mixer.music.play(-1)
+                else:
+                    pygame.mixer.music.stop()
+            except:
+                pass
+
+        elif self.selection == Options.DIFFICULTY:
+            if Variables.dificulty < 2:
+                Variables.dificulty += 1
+
+        self.refresh()
 
     def move_down(self):
         self.selection += 1

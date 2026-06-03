@@ -1,7 +1,7 @@
 import pygame
 import random
 
-from pygame.locals import *
+from locals import *
 
 import util
 import random
@@ -15,6 +15,14 @@ class Level:
     TITANIC = 4
     POWERUPS = 5
     def __init__(self, endless = False):
+      
+      if Variables.dificulty == 0:
+        self.difficulty_multiplier = 1.5
+      elif Variables.dificulty == 2:
+        self.difficulty_multiplier = 0.75
+      else:
+        self.difficulty_multiplier = 1.0
+
       self.endless = endless
       if not endless:
         self.phase_lengths = [900, 900, 900, 1800, 1300, -1]
@@ -143,6 +151,11 @@ class Level:
 
         for enemy in self.phases[self.phase % len(self.phases)]:
             offset, delay = enemy
+            if offset > 0:
+                offset = int(offset * self.difficulty_multiplier)
+
+            if delay > 0:
+                delay = int(delay * self.difficulty_multiplier)
             if self.endless and delay > 0:
                 delay -= self.phase / 4 * 5
                 offset -= self.phase / 4 * 5

@@ -18,6 +18,10 @@ class Options:
     def __init__(self, screen):
         self.screen = screen
 
+        self.virtual_screen = pygame.Surface(
+            (SCREEN_WIDTH, SCREEN_HEIGHT)
+        )
+
         if not Options.sky:
             Options.sky = util.load_image("taivas")
             Options.sky = pygame.transform.scale(Options.sky, (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -45,26 +49,46 @@ class Options:
         done = False
 
         while not done:
-            self.screen.blit(Options.sky, self.screen.get_rect())
+            self.virtual_screen.blit(Options.sky, self.virtual_screen.get_rect())
             self.water.update()
-            self.water_sprite.draw(self.screen)
+            self.water_sprite.draw(self.virtual_screen)
 
             for i in range(len(self.menu)):
                 self.render(i)
 
             cloud.update()
 
-            cloud.draw(self.screen)
+            cloud.draw(self.virtual_screen)
 
             rect = Options.logo.get_rect()
-            rect.centerx = self.screen.get_rect().centerx
+            rect.centerx = self.virtual_screen.get_rect().centerx
             rect.top = 0
-            self.screen.blit(Options.logo, rect)
+            self.virtual_screen.blit(Options.logo, rect)
 
             image = util.smallfont.render("http://funnyboat.sourceforge.net/", True, (0,0,0))
             rect = image.get_rect()
-            rect.midbottom = self.screen.get_rect().midbottom
-            self.screen.blit(image, rect)
+            rect.midbottom = self.virtual_screen.get_rect().midbottom
+            self.virtual_screen.blit(image, rect)
+
+            window_width, window_height = self.screen.get_size()
+            scale = min(
+                window_width / SCREEN_WIDTH,
+                window_height / SCREEN_HEIGHT
+            )
+
+            scaled_width = int(SCREEN_WIDTH * scale)
+            scaled_height = int(SCREEN_HEIGHT * scale)
+
+            x = (window_width - scaled_width) // 2
+            y = (window_height - scaled_height) // 2
+
+            scaled_surface = pygame.transform.smoothscale(
+                self.virtual_screen,
+                (scaled_width, scaled_height)
+            )
+
+            self.screen.fill((0,0,0))
+            self.screen.blit(scaled_surface, (x,y))
 
             pygame.display.flip()
 
@@ -74,6 +98,14 @@ class Options:
             while not nextframe:
                 pygame.event.post(pygame.event.wait())
                 for event in pygame.event.get():
+                    if event.type == VIDEORESIZE:
+                        self.screen = pygame.display.set_mode(
+                            event.size,
+                            pygame.RESIZABLE,
+                            32
+                        )
+
+                        continue
                     if event.type == QUIT or \
                         event.type == KEYDOWN and event.key == K_ESCAPE:
                         self.selection = -1
@@ -162,7 +194,7 @@ class Options:
         title = self.menu[id]
         image = util.smallfont.render(title, Variables.alpha, color)
         rect = image.get_rect()
-        rect.centerx = self.screen.get_rect().centerx
+        rect.centerx = self.virtual_screen.get_rect().centerx
         rect.top = Options.logo.get_height() + id * rect.height * 1.1
 
-        self.screen.blit(image, rect)
+        self.virtual_screen.blit(image, rect)

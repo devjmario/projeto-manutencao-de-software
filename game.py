@@ -49,6 +49,9 @@ class Game:
 
     def __init__(self, screen, endless = False):
         self.screen = screen
+        self.virtual_screen = pygame.Surface(
+            (SCREEN_WIDTH, SCREEN_HEIGHT)
+        )
 
         self.sharks = []
         self.shark_sprites = pygame.sprite.Group()
@@ -113,7 +116,7 @@ class Game:
         self.pause = False
         self.pause_image = util.bigfont.render("Pause", Variables.alpha, (0,0,0))
         self.pause_rect = self.pause_image.get_rect()
-        self.pause_rect.center = self.screen.get_rect().center
+        self.pause_rect.center = self.virtual_screen.get_rect().center
 
         self.spacepressed = None
 
@@ -248,7 +251,7 @@ class Game:
             self.gameover_image.blit(images[i], rect)
 
         self.gameover_rect = self.gameover_image.get_rect()
-        self.gameover_rect.center = self.screen.get_rect().center
+        self.gameover_rect.center = self.virtual_screen.get_rect().center
 
     def take_screenshot(self):
         i = 1
@@ -257,7 +260,7 @@ class Game:
             i += 1
             filename = "sshot" + str(i) + ".tga"
         
-        pygame.image.save(self.screen, filename)
+        pygame.image.save(self.virtual_screen, filename)
         print("Screenshot saved as " + filename)
 
     def handle_gameover(self,event):
@@ -449,7 +452,11 @@ class Game:
 
                 elif event.type in [JOYBUTTONDOWN, JOYBUTTONUP, JOYAXISMOTION]:
                     self.handle_joystick(event)
-
+                elif event.type == VIDEORESIZE:
+                    self.screen = pygame.display.set_mode(
+                        event.size,
+                        pygame.RESIZABLE
+                    )
     def set_pause(self):
         self.pause = not self.pause
 
@@ -460,28 +467,28 @@ class Game:
         self.pause = not self.pause
 
     def draw(self):
-        self.screen.blit(Game.sky, self.screen.get_rect())
-        self.health_sprite.draw(self.screen)
-        self.score_sprite.draw(self.screen)
-        self.player_sprite.draw(self.screen)
-        self.powerup_sprites.draw(self.screen)
-        self.pirate_sprites.draw(self.screen)
+        self.virtual_screen.blit(Game.sky, self.virtual_screen.get_rect())
+        self.health_sprite.draw(self.virtual_screen)
+        self.score_sprite.draw(self.virtual_screen)
+        self.player_sprite.draw(self.virtual_screen)
+        self.powerup_sprites.draw(self.virtual_screen)
+        self.pirate_sprites.draw(self.virtual_screen)
         if self.titanic:
-            self.titanic_sprite.draw(self.screen)
-        self.seagull_sprites.draw(self.screen)
-        cloud.draw(self.screen)
-        self.shark_sprites.draw(self.screen)
-        self.mine_sprites.draw(self.screen)
-        self.cannonball_sprites.draw(self.screen)
-        self.water_sprite.draw(self.screen)
+            self.titanic_sprite.draw(self.virtual_screen)
+        self.seagull_sprites.draw(self.virtual_screen)
+        cloud.draw(self.virtual_screen)
+        self.shark_sprites.draw(self.virtual_screen)
+        self.mine_sprites.draw(self.virtual_screen)
+        self.cannonball_sprites.draw(self.virtual_screen)
+        self.water_sprite.draw(self.virtual_screen)
         if Variables.particles:
-            self.particle_sprite.draw(self.screen)
+            self.particle_sprite.draw(self.virtual_screen)
 
         if self.pause:
-            self.screen.blit(self.pause_image, self.pause_rect)
+            self.virtual_screen.blit(self.pause_image, self.pause_rect)
 
         if self.gameover:
-            self.screen.blit(self.gameover_image, self.gameover_rect)
+            self.virtual_screen.blit(self.gameover_image, self.gameover_rect)
 
         if self.level.t < LEVEL_MESSAGE_DURATION:
             image = None
@@ -490,7 +497,7 @@ class Game:
               for text in self.level.phase_messages[self.level.phase].split("\n"):
                 image = util.smallfont.render(text, Variables.alpha, (0,0,0))
                 rect = image.get_rect()
-                rect.centerx = self.screen.get_rect().centerx
+                rect.centerx = self.virtual_screen.get_rect().centerx
                 rect.top = 100 + rect.height * i
                 blit_image = pygame.Surface((image.get_width(), image.get_height()))
                 blit_image.fill((166,183,250))
@@ -498,8 +505,29 @@ class Game:
                 blit_image.blit(image, image.get_rect())
                 if self.level.t > 60:
                     blit_image.set_alpha(255 - (self.level.t - 60) * 255 / 60)
-                self.screen.blit(blit_image, rect)
+                self.virtual_screen.blit(blit_image, rect)
                 i += 1
+
+        window_width, window_height = self.screen.get_size()
+
+        scale = min(
+            window_width / SCREEN_WIDTH,
+            window_height / SCREEN_HEIGHT
+        )
+
+        scaled_width = int(SCREEN_WIDTH * scale)
+        scaled_height = int(SCREEN_HEIGHT * scale)
+
+        x = (window_width - scaled_width) // 2
+        y = (window_height - scaled_height) // 2
+
+        scaled_surface = pygame.transform.smoothscale(
+            self.virtual_screen,
+            (scaled_width, scaled_height)
+        )
+
+        self.screen.fill((0,0,0))
+        self.screen.blit(scaled_surface, (x,y))
 
         pygame.display.flip()
 
@@ -616,7 +644,7 @@ class Game:
                 if Variables.particles:
                     self.particles.add_explosion_particle((mine.rect.centerx, mine.rect.top + mine.image.get_rect().centerx))
                     self.particles.add_debris_particle((mine.rect.centerx, mine.rect.top + mine.image.get_rect().centerx))
-            if mine.rect.right < self.screen.get_rect().left:
+            if mine.rect.right < self.virtual_screen.get_rect().left:
                 self.mines.remove(mine)
                 self.mine_sprites.remove(mine)
 
@@ -625,7 +653,7 @@ class Game:
             if shark.dying:
                 if Variables.particles:
                     self.particles.add_blood_particle(shark.rect.center)
-            if shark.rect.right < self.screen.get_rect().left or shark.dead:
+            if shark.rect.right < self.virtual_screen.get_rect().left or shark.dead:
                 self.sharks.remove(shark)
                 self.shark_sprites.remove(shark)
 
@@ -642,7 +670,7 @@ class Game:
                 for i in range(4):
                     self.particles.add_fire_steam_particle(particle_point)
                 
-            if pirate.rect.right < self.screen.get_rect().left or pirate.dead:
+            if pirate.rect.right < self.virtual_screen.get_rect().left or pirate.dead:
                 self.pirates.remove(pirate)
                 self.pirate_sprites.remove(pirate)
             elif pirate.dying:

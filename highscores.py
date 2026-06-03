@@ -14,6 +14,10 @@ class Highscores:
     def __init__(self, screen, new_score = -1, endless = False, online = False):
         self.screen = screen
 
+        self.virtual_screen = pygame.Surface(
+            (SCREEN_WIDTH, SCREEN_HEIGHT)
+        )
+
         if not endless:
             self.title = util.bigfont.render("Story Mode", True, (0,0,0))
         elif not online:
@@ -138,17 +142,17 @@ class Highscores:
         water_sprite = pygame.sprite.Group()
         water_sprite.add(water)
         while not self.done:
-            self.screen.blit(Highscores.sky, self.screen.get_rect())
+            self.virtual_screen.blit(Highscores.sky, self.virtual_screen.get_rect())
             water.update()
             cloud.update()
-            cloud.draw(self.screen)
-            water_sprite.draw(self.screen)
+            cloud.draw(self.virtual_screen)
+            water_sprite.draw(self.virtual_screen)
 
             rect = self.title.get_rect()
-            rect.centerx = self.screen.get_rect().centerx
+            rect.centerx = self.virtual_screen.get_rect().centerx
             rect.top = 10
 
-            self.screen.blit(self.title, rect)
+            self.virtual_screen.blit(self.title, rect)
 
             for i in range(10):
                 color = (0,0,0)
@@ -164,13 +168,34 @@ class Highscores:
                 rect = image.get_rect()
                 rect.top = 50 + i * 1.5 * rect.height
                 rect.left = 10
-                self.screen.blit(image, rect)
+                self.virtual_screen.blit(image, rect)
 
                 image = util.smallfont.render(str(score[1]), True, color)
                 rect = image.get_rect()
                 rect.top = 50 + i * 1.5 * rect.height
-                rect.right = self.screen.get_rect().right - 10
-                self.screen.blit(image, rect)
+                rect.right = self.virtual_screen.get_rect().right - 10
+                self.virtual_screen.blit(image, rect)
+
+            window_width, window_height = self.screen.get_size()
+
+            scale = min(
+                window_width / SCREEN_WIDTH,
+                window_height / SCREEN_HEIGHT
+            )
+
+            scaled_width = int(SCREEN_WIDTH * scale)
+            scaled_height = int(SCREEN_HEIGHT * scale)
+
+            x = (window_width - scaled_width) // 2
+            y = (window_height - scaled_height) // 2
+
+            scaled_surface = pygame.transform.smoothscale(
+                self.virtual_screen,
+                (scaled_width, scaled_height)
+            )
+
+            self.screen.fill((0,0,0))
+            self.screen.blit(scaled_surface, (x,y))
 
             pygame.display.flip()
 
@@ -178,6 +203,14 @@ class Highscores:
             while not nextframe:
                 pygame.event.post(pygame.event.wait())
                 for event in pygame.event.get():
+                    if event.type == VIDEORESIZE:
+                        self.screen = pygame.display.set_mode(
+                            event.size,
+                            pygame.RESIZABLE,
+                            32
+                        )
+
+                        continue
                     if event.type == NEXTFRAME:
                         nextframe = True
                         continue

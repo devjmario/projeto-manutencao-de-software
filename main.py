@@ -57,7 +57,11 @@ def main():
 
     scr_options = 0
     if SCREEN_FULLSCREEN: scr_options += FULLSCREEN
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT),scr_options ,32)
+    screen = pygame.display.set_mode(
+        (800, 600),
+        pygame.RESIZABLE,
+        32
+    )
 
     pygame.display.set_icon(util.load_image("kuvake"))
     pygame.display.set_caption("Trip on the Funny Boat")
